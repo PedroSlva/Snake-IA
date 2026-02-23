@@ -3,191 +3,326 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Snake Hello Kitty</title>
+<title>Snake</title>
 <style>
-  * { margin: 0; padding: 0; box-sizing: border-box; }
+  * { margin:0; padding:0; box-sizing:border-box; }
   body {
-    background: #ffe4f0;
     font-family: 'Courier New', monospace;
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    justify-content: center;
-    min-height: 100vh;
-    background-image: radial-gradient(#ffb6d9 1px, transparent 1px);
-    background-size: 20px 20px;
-  }
-  h1 {
-    font-size: 1.8rem;
-    color: #ff69b4;
-    text-shadow: 2px 2px 0 #fff, 4px 4px 0 #ffb6d9;
-    margin-bottom: 6px;
-    letter-spacing: 2px;
-  }
-  #info {
-    display: flex; gap: 20px;
-    margin-bottom: 10px;
-    font-size: 0.9rem;
-    color: #ff69b4;
-    background: #fff;
-    padding: 6px 20px;
-    border-radius: 20px;
-    border: 2px solid #ffb6d9;
-    box-shadow: 0 2px 8px #ffb6d955;
-  }
-  #canvas-wrap { position: relative; }
-  canvas {
-    border: 4px solid #ff69b4;
-    border-radius: 16px;
-    box-shadow: 0 0 24px #ff69b455;
-    display: block;
-  }
-  #overlay {
-    position: absolute; inset: 0;
-    background: #ffe4f0ee;
-    border-radius: 12px;
     display: flex; flex-direction: column;
     align-items: center; justify-content: center;
-    gap: 12px;
+    min-height: 100vh;
+    transition: background 0.4s;
   }
-  #overlay h2 { font-size: 1.6rem; color: #ff69b4; }
-  #overlay p { color: #ff9dca; font-size: 0.9rem; }
-  button {
-    background: #ff69b4;
-    border: none;
-    color: #fff;
-    padding: 10px 30px;
-    font-size: 1rem;
-    border-radius: 25px;
-    cursor: pointer;
-    font-family: 'Courier New', monospace;
-    letter-spacing: 1px;
-    box-shadow: 0 4px 0 #d44f96;
-    transition: all 0.1s;
+  h1 { font-size:1.7rem; margin-bottom:8px; transition: all 0.3s; }
+
+  /* TEMA SELECTOR */
+  #theme-bar {
+    display: flex; gap: 8px; margin-bottom: 10px;
   }
-  button:active { transform: translateY(3px); box-shadow: 0 1px 0 #d44f96; }
-  button:hover { background: #ff85c2; }
+  .t-btn {
+    padding: 6px 16px; border-radius: 20px; border: 2px solid transparent;
+    cursor: pointer; font-size: 0.8rem; font-family: 'Courier New', monospace;
+    font-weight: bold; transition: all 0.2s;
+  }
+  .t-btn.active { transform: scale(1.1); }
+
+  #info {
+    display: flex; gap: 16px; margin-bottom: 10px;
+    font-size: 0.85rem; padding: 6px 20px;
+    border-radius: 20px; border: 2px solid;
+    transition: all 0.3s;
+  }
+  #canvas-wrap { position: relative; }
+  canvas { display: block; transition: border-color 0.3s, box-shadow 0.3s; }
+  #overlay {
+    position:absolute; inset:0;
+    display:flex; flex-direction:column;
+    align-items:center; justify-content:center; gap:12px;
+  }
+  #overlay h2 { font-size:1.4rem; }
+  button#startBtn {
+    padding:10px 28px; font-size:1rem;
+    font-family:'Courier New',monospace;
+    letter-spacing:1px; cursor:pointer;
+    transition: all 0.2s;
+  }
+  #tip { font-size:0.72rem; }
 </style>
 </head>
 <body>
-<h1>🎀 Hello Snake! 🎀</h1>
+<h1 id="title">SNAKE</h1>
+<div id="theme-bar">
+  <button class="t-btn active" onclick="setTheme('neon')" id="btn-neon">⚡ NEON</button>
+  <button class="t-btn" onclick="setTheme('kitty')" id="btn-kitty">🎀 KITTY</button>
+  <button class="t-btn" onclick="setTheme('retro')" id="btn-retro">👾 RETRO</button>
+</div>
 <div id="info">
-  🌸 SCORE: <b id="score">0</b> &nbsp;|&nbsp; 🏆 RECORDE: <b id="high">0</b> &nbsp;|&nbsp; ⭐ LEVEL: <b id="level">1</b>
+  SCORE: <b id="score">0</b> | RECORDE: <b id="high">0</b> | LEVEL: <b id="level">1</b>
 </div>
 <div id="canvas-wrap">
   <canvas id="c" width="400" height="400"></canvas>
-  <div id="overlay">
-    <div style="font-size:3rem">🐱</div>
-    <h2>Hello Snake!</h2>
-    <p>Come os itens fofos da Kitty!</p>
-    <button onclick="startGame()">▶ JOGAR</button>
-    <p style="font-size:0.75rem;color:#ffb6d9">Setas do teclado ou WASD • Swipe no celular</p>
-  </div>
+  <div id="overlay"></div>
 </div>
 
 <script>
 const canvas = document.getElementById('c');
 const ctx = canvas.getContext('2d');
-const CELL = 20, COLS = 20, ROWS = 20;
-const foods = ['🎀','🌸','🍭','⭐','🎂','💖','🌺','🍓','🎁','💝'];
+const CELL=20, COLS=20, ROWS=20;
 
-let snake, dir, nextDir, food, foodType, score, hi = 0, lvl, loop, running = false;
+const THEMES = {
+  neon: {
+    body: '#0d1117',
+    bodyBg: '#0d1117',
+    bgDot: null,
+    grid: '#161b22',
+    cellBg: '#0d1117',
+    snakeHead: '#00ff88',
+    snakeTail: '#008844',
+    snakeTail2: '#00cc66',
+    border: '2px solid #00ff88',
+    shadow: '0 0 20px #00ff8855',
+    infoBorder: '#00ff88',
+    infoBg: 'transparent',
+    infoColor: '#00ff88',
+    overlayBg: '#0d1117cc',
+    overlayTitle: '#00ff88',
+    overlayText: '#8b949e',
+    btnBg: 'transparent',
+    btnBorder: '2px solid #00ff88',
+    btnColor: '#00ff88',
+    btnRadius: '4px',
+    btnShadow: '',
+    titleColor: '#00ff88',
+    titleShadow: '0 0 10px #00ff88',
+    foods: ['⚡','🔧','💾','📡','🖥️','⌨️','🔋','🐛'],
+    title: '&lt; SNAKE.EXE /&gt;',
+    emoji: '🖥️',
+    canvasRadius: '4px',
+  },
+  kitty: {
+    body: '#ffe4f0',
+    bodyBg: '#ffe4f0',
+    bgDot: '#ffb6d9',
+    grid: '#ffe4f0',
+    cellBg: '#fff0f8',
+    snakeHead: '#ff69b4',
+    snakeTail: '#ffb6d9',
+    snakeTail2: '#ff85c2',
+    border: '4px solid #ff69b4',
+    shadow: '0 0 24px #ff69b455',
+    infoBorder: '#ffb6d9',
+    infoBg: '#fff',
+    infoColor: '#ff69b4',
+    overlayBg: '#ffe4f0ee',
+    overlayTitle: '#ff69b4',
+    overlayText: '#ff9dca',
+    btnBg: '#ff69b4',
+    btnBorder: 'none',
+    btnColor: '#fff',
+    btnRadius: '25px',
+    btnShadow: '0 4px 0 #d44f96',
+    titleColor: '#ff69b4',
+    titleShadow: '2px 2px 0 #fff, 4px 4px 0 #ffb6d9',
+    foods: ['🎀','🌸','🍭','⭐','🎂','💖','🌺','🍓','🎁','💝'],
+    title: '🎀 Hello Snake! 🎀',
+    emoji: '🐱',
+    canvasRadius: '16px',
+  },
+  retro: {
+    body: '#1a1a2e',
+    bodyBg: '#1a1a2e',
+    bgDot: null,
+    grid: '#16213e',
+    cellBg: '#16213e',
+    snakeHead: '#f5a623',
+    snakeTail: '#c47d0e',
+    snakeTail2: '#e8920f',
+    border: '4px solid #f5a623',
+    shadow: '0 0 20px #f5a62355',
+    infoBorder: '#f5a623',
+    infoBg: 'transparent',
+    infoColor: '#f5a623',
+    overlayBg: '#1a1a2ecc',
+    overlayTitle: '#f5a623',
+    overlayText: '#a0a8b8',
+    btnBg: 'transparent',
+    btnBorder: '2px solid #f5a623',
+    btnColor: '#f5a623',
+    btnRadius: '0px',
+    btnShadow: '',
+    titleColor: '#f5a623',
+    titleShadow: '3px 3px 0 #c47d0e',
+    foods: ['👾','🕹️','🎮','🏆','💣','⬆️','🔴','💀'],
+    title: '👾 RETRO SNAKE 👾',
+    emoji: '🕹️',
+    canvasRadius: '0px',
+  }
+};
+
+let currentTheme = 'neon';
+let snake, dir, nextDir, food, foodType, score, hi=0, lvl, loop, running=false;
+
+function setTheme(name) {
+  currentTheme = name;
+  const t = THEMES[name];
+
+  // body bg
+  document.body.style.background = t.bodyBg;
+  if (t.bgDot) {
+    document.body.style.backgroundImage = `radial-gradient(${t.bgDot} 1px, transparent 1px)`;
+    document.body.style.backgroundSize = '20px 20px';
+  } else {
+    document.body.style.backgroundImage = 'none';
+  }
+
+  // title
+  const title = document.getElementById('title');
+  title.innerHTML = t.title;
+  title.style.color = t.titleColor;
+  title.style.textShadow = t.titleShadow;
+
+  // info bar
+  const info = document.getElementById('info');
+  info.style.borderColor = t.infoBorder;
+  info.style.background = t.infoBg;
+  info.style.color = t.infoColor;
+
+  // canvas
+  canvas.style.border = t.border;
+  canvas.style.boxShadow = t.shadow;
+  canvas.style.borderRadius = t.canvasRadius;
+
+  // theme buttons
+  document.querySelectorAll('.t-btn').forEach(b => {
+    b.classList.remove('active');
+    b.style.background = 'transparent';
+    b.style.borderColor = t.infoBorder;
+    b.style.color = t.infoColor;
+  });
+  const active = document.getElementById('btn-'+name);
+  active.classList.add('active');
+  active.style.background = t.snakeHead;
+  active.style.color = name==='kitty'?'#fff':t.body;
+
+  showOverlay('start');
+  if (running) draw();
+}
+
+function applyBtnStyle(btn) {
+  const t = THEMES[currentTheme];
+  btn.style.background = t.btnBg;
+  btn.style.border = t.btnBorder;
+  btn.style.color = t.btnColor;
+  btn.style.borderRadius = t.btnRadius;
+  btn.style.boxShadow = t.btnShadow;
+  btn.style.padding = '10px 28px';
+  btn.style.fontSize = '1rem';
+  btn.style.fontFamily = "'Courier New', monospace";
+  btn.style.cursor = 'pointer';
+  btn.style.letterSpacing = '1px';
+}
+
+function showOverlay(mode) {
+  const t = THEMES[currentTheme];
+  const ov = document.getElementById('overlay');
+  ov.style.background = t.overlayBg;
+  ov.style.borderRadius = t.canvasRadius;
+
+  if (mode==='start') {
+    ov.innerHTML = `
+      <div style="font-size:3rem">${t.emoji}</div>
+      <h2 style="color:${t.overlayTitle}">${mode==='start'?'SNAKE':'FIM!'}</h2>
+      <p style="color:${t.overlayText}">Come os itens e não bata nas paredes!</p>
+      <button id="startBtn" onclick="startGame()">▶ JOGAR</button>
+      <p id="tip" style="color:${t.overlayText}">Setas / WASD • Swipe no celular</p>`;
+  } else {
+    ov.innerHTML = `
+      <div style="font-size:2.5rem">${mode==='kitty'?'😿':'💀'}</div>
+      <h2 style="color:${t.overlayTitle}">FIM DE JOGO!</h2>
+      <p style="color:${t.overlayText}">Score: <b>${score}</b> | Recorde: <b>${hi}</b></p>
+      <button id="startBtn" onclick="startGame()">▶ JOGAR DE NOVO</button>`;
+  }
+  applyBtnStyle(document.getElementById('startBtn'));
+  ov.style.display = 'flex';
+}
 
 function startGame() {
   document.getElementById('overlay').style.display = 'none';
   snake = [{x:10,y:10},{x:9,y:10},{x:8,y:10}];
-  dir = {x:1,y:0}; nextDir = {x:1,y:0};
-  score = 0; lvl = 1;
+  dir={x:1,y:0}; nextDir={x:1,y:0};
+  score=0; lvl=1;
   spawnFood(); updateInfo();
   clearInterval(loop);
-  running = true;
+  running=true;
   loop = setInterval(tick, 150);
 }
 
 function spawnFood() {
-  do {
-    food = {x: Math.floor(Math.random()*COLS), y: Math.floor(Math.random()*ROWS)};
-  } while (snake.some(s => s.x===food.x && s.y===food.y));
-  foodType = foods[Math.floor(Math.random()*foods.length)];
+  do { food={x:Math.floor(Math.random()*COLS),y:Math.floor(Math.random()*ROWS)};
+  } while(snake.some(s=>s.x===food.x&&s.y===food.y));
+  foodType = THEMES[currentTheme].foods[Math.floor(Math.random()*THEMES[currentTheme].foods.length)];
 }
 
 function tick() {
-  dir = nextDir;
-  const head = {x: snake[0].x+dir.x, y: snake[0].y+dir.y};
-  if (head.x<0||head.x>=COLS||head.y<0||head.y>=ROWS||snake.some(s=>s.x===head.x&&s.y===head.y)) {
+  dir=nextDir;
+  const head={x:snake[0].x+dir.x,y:snake[0].y+dir.y};
+  if(head.x<0||head.x>=COLS||head.y<0||head.y>=ROWS||snake.some(s=>s.x===head.x&&s.y===head.y)){
     gameOver(); return;
   }
   snake.unshift(head);
-  if (head.x===food.x && head.y===food.y) {
-    score += 10*lvl;
-    if (score >= lvl*100) { lvl++; clearInterval(loop); loop = setInterval(tick, Math.max(60,150-(lvl-1)*15)); }
+  if(head.x===food.x&&head.y===food.y){
+    score+=10*lvl;
+    if(score>=lvl*100){lvl++;clearInterval(loop);loop=setInterval(tick,Math.max(60,150-(lvl-1)*15));}
     spawnFood();
   } else snake.pop();
   updateInfo(); draw();
 }
 
 function draw() {
-  // bg
-  ctx.fillStyle = '#fff0f8';
+  const t = THEMES[currentTheme];
+  ctx.fillStyle = t.cellBg;
   ctx.fillRect(0,0,canvas.width,canvas.height);
-
-  // grid suave
-  ctx.strokeStyle = '#ffe4f0';
+  ctx.strokeStyle = t.grid;
   for(let i=0;i<COLS;i++) for(let j=0;j<ROWS;j++) ctx.strokeRect(i*CELL,j*CELL,CELL,CELL);
 
-  // cobra
-  snake.forEach((s,i) => {
-    const x = s.x*CELL, y = s.y*CELL;
-    // corpo
-    ctx.fillStyle = i===0 ? '#ff69b4' : (i%2===0 ? '#ff85c2' : '#ffb6d9');
+  snake.forEach((s,i)=>{
+    const x=s.x*CELL, y=s.y*CELL;
+    ctx.fillStyle = i===0?t.snakeHead:(i%2===0?t.snakeTail:t.snakeTail2);
+    ctx.shadowColor = t.snakeHead;
+    ctx.shadowBlur = i===0?12:3;
     ctx.beginPath();
-    ctx.roundRect(x+1,y+1,CELL-2,CELL-2,6);
+    const r = currentTheme==='kitty'?6:currentTheme==='retro'?0:3;
+    ctx.roundRect(x+1,y+1,CELL-2,CELL-2,r);
     ctx.fill();
+    ctx.shadowBlur=0;
 
-    // laço no topo da cabeça
-    if (i===0) {
+    if(i===0) {
       // olhos
-      ctx.fillStyle = '#fff';
-      const ex1 = dir.x>0?10:dir.x<0?4: 5;
-      const ex2 = dir.x>0?13:dir.x<0?7: 11;
-      const ey  = dir.y>0?12:dir.y<0?4: 7;
-      ctx.fillRect(x+ex1,y+ey,4,4);
-      ctx.fillRect(x+ex2,y+ey,4,4);
+      ctx.fillStyle='#fff';
+      const ex1=dir.x>0?10:dir.x<0?3:5, ex2=dir.x>0?13:dir.x<0?7:11;
+      const ey=dir.y>0?11:dir.y<0?3:7;
+      ctx.fillRect(x+ex1,y+ey,3,3); ctx.fillRect(x+ex2,y+ey,3,3);
       ctx.fillStyle='#333';
-      ctx.fillRect(x+ex1+1,y+ey+1,2,2);
-      ctx.fillRect(x+ex2+1,y+ey+1,2,2);
-      // nariz
-      ctx.fillStyle='#ff1493';
-      ctx.fillRect(x+9,y+ey+4,2,1);
+      ctx.fillRect(x+ex1+1,y+ey+1,1,1); ctx.fillRect(x+ex2+1,y+ey+1,1,1);
     }
-
-    // laço em algumas partes do corpo
-    if (i>0 && i%4===0) {
-      ctx.font='10px serif';
-      ctx.textAlign='center';
-      ctx.textBaseline='middle';
+    if(currentTheme==='kitty'&&i>0&&i%4===0){
+      ctx.font='10px serif'; ctx.textAlign='center'; ctx.textBaseline='middle';
       ctx.fillText('🎀',x+CELL/2,y+CELL/2);
     }
   });
 
-  // comida
   ctx.font=`${CELL}px serif`;
   ctx.textAlign='center'; ctx.textBaseline='middle';
-  ctx.fillText(foodType, food.x*CELL+CELL/2, food.y*CELL+CELL/2+1);
+  ctx.fillText(foodType,food.x*CELL+CELL/2,food.y*CELL+CELL/2+1);
 }
 
-function gameOver() {
+function gameOver(){
   running=false; clearInterval(loop);
   if(score>hi) hi=score;
-  const ov=document.getElementById('overlay');
-  ov.innerHTML=`<div style="font-size:2.5rem">😿</div>
-    <h2 style="color:#ff69b4">Fim de Jogo!</h2>
-    <p>Score: <b>${score}</b> | Recorde: <b>${hi}</b></p>
-    <button onclick="startGame()">▶ JOGAR DE NOVO</button>`;
-  ov.style.display='flex';
+  showOverlay('over');
 }
 
-function updateInfo() {
+function updateInfo(){
   document.getElementById('score').textContent=score;
   document.getElementById('high').textContent=hi;
   document.getElementById('level').textContent=lvl;
@@ -209,7 +344,7 @@ canvas.addEventListener('touchend',e=>{
   if(nextDir.x===-dir.x&&nextDir.y===-dir.y) nextDir=dir;
 },{passive:true});
 
-draw();
+setTheme('neon');
 </script>
 </body>
 </html>
